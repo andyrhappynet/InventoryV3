@@ -630,7 +630,7 @@ async function loadData() {
 
       // init state
       GLOBAL_FILTERS.forEach(f => globalSel[f.key] = new Set());
-      COLS.forEach(c => colSearchVals[c.key] = '');
+      COLS.forEach(c => colSearchVals[c.key] = c.type === 'dropdown' ? new Set() : '');
 
       buildGlobalMultiSelects();
       buildColSearchRow();
@@ -763,26 +763,50 @@ function msUpdateLabel(filterKey) {
 }
 
 /* ═══════════════════════════════
-   COLUMN SEARCH ROW
+   COLUMN SEARCH ROW (multi-select)
 ═══════════════════════════════ */
 function buildColSearchRow() {
   const thead = document.getElementById('t-search');
-  // Build one <tr> with one <td> per column
+
   const cells = COLS.map(c => {
     const actual = colMap[c.key];
     const vals = actual ? [...new Set(allData.map(r => r[actual]).filter(Boolean))].sort() : [];
+    const cid = 'col-' + c.key.replace(/[^a-z0-9]/gi, '_');
 
     if (c.type === 'dropdown' && vals.length) {
-      const opts = vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+      // multi-select mini dropdown
+      const optsHtml = vals.map(v =>
+        `<label class="ms-option">
+          <input type="checkbox" value="${esc(v)}" onchange="colMsChange('${c.key}',this)">
+          ${esc(v)}
+        </label>`
+      ).join('');
       return `<td>
-        <select onchange="colSearch('${c.key}', this.value)">
-          <option value="">— All —</option>${opts}
-        </select>
+        <div class="ms-wrap" style="min-width:0">
+          <button type="button" class="ms-trigger" style="font-size:12px;padding:5px 28px 5px 8px"
+            onclick="msToggle(this)" id="trig-${cid}">
+            <span class="ms-label" id="lbl-${cid}" style="color:var(--text-dim)">— All —</span>
+            <span class="ms-arrow" style="font-size:9px">▼</span>
+          </button>
+          <div class="ms-dropdown" id="drop-${cid}">
+            <div class="ms-search-wrap">
+              <input class="ms-search" type="text" placeholder="Search…"
+                oninput="msSearchOpts(this,'drop-${cid}')">
+            </div>
+            <div class="ms-actions">
+              <button class="ms-act-btn" onclick="colMsSelectAll('${c.key}','drop-${cid}','${cid}')">All</button>
+              <span style="color:var(--border-lt)">·</span>
+              <button class="ms-act-btn" onclick="colMsClear('${c.key}','drop-${cid}','${cid}')">Clear</button>
+            </div>
+            <div class="ms-options">${optsHtml}</div>
+          </div>
+        </div>
       </td>`;
     } else {
       return `<td>
         <input type="text" placeholder="Search…"
-          oninput="colSearch('${c.key}', this.value)">
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-family:'Inter',Arial,sans-serif;font-size:12px;"
+          oninput="colTextSearch('${c.key}', this.value)">
       </td>`;
     }
   });
@@ -790,7 +814,48 @@ function buildColSearchRow() {
   thead.innerHTML = `<tr>${cells.join('')}</tr>`;
 }
 
-function colSearch(key, val) {
+// column multi-select helpers
+function colMsChange(key, checkbox) {
+  if (checkbox.checked) colSearchVals[key].add(checkbox.value);
+  else colSearchVals[key].delete(checkbox.value);
+  colMsUpdateLabel(key);
+  page = 1;
+  applyFilters();
+}
+function colMsSelectAll(key, dropId, cid) {
+  document.querySelectorAll(`#${dropId} .ms-option:not(.hidden) input`).forEach(cb => {
+    cb.checked = true; colSearchVals[key].add(cb.value);
+  });
+  colMsUpdateLabel(key);
+  page = 1;
+  applyFilters();
+}
+function colMsClear(key, dropId, cid) {
+  colSearchVals[key].clear();
+  document.querySelectorAll(`#${dropId} input[type=checkbox]`).forEach(cb => cb.checked = false);
+  colMsUpdateLabel(key);
+  page = 1;
+  applyFilters();
+}
+function colMsUpdateLabel(key) {
+  const c = COLS.find(x => x.key === key);
+  if (!c) return;
+  const cid = 'col-' + key.replace(/[^a-z0-9]/gi, '_');
+  const lbl  = document.getElementById('lbl-' + cid);
+  const trig = document.getElementById('trig-' + cid);
+  if (!lbl || !trig) return;
+  const sel = colSearchVals[key];
+  if (sel.size === 0) {
+    lbl.textContent = '— All —';
+    trig.querySelector('.ms-count')?.remove();
+  } else {
+    lbl.textContent = sel.size === 1 ? [...sel][0] : `${sel.size} selected`;
+    let badge = trig.querySelector('.ms-count');
+    if (!badge) { badge = document.createElement('span'); badge.className = 'ms-count'; trig.insertBefore(badge, trig.querySelector('.ms-arrow')); }
+    badge.textContent = sel.size;
+  }
+}
+function colTextSearch(key, val) {
   colSearchVals[key] = val.toLowerCase();
   page = 1;
   applyFilters();
@@ -811,10 +876,15 @@ function applyFilters() {
     // column-level search
     for (const c of COLS) {
       const sv = colSearchVals[c.key];
-      if (!sv) continue;
       const col = colMap[c.key];
       if (!col) continue;
-      if (!String(row[col]||'').toLowerCase().includes(sv)) return false;
+      if (sv instanceof Set) {
+        if (sv.size === 0) continue;
+        if (!sv.has(row[col])) return false;
+      } else {
+        if (!sv) continue;
+        if (!String(row[col]||'').toLowerCase().includes(sv)) return false;
+      }
     }
     return true;
   });
@@ -830,8 +900,17 @@ function clearFilters() {
     document.querySelectorAll(`#drop-${f.wrapperId} input[type=checkbox]`).forEach(cb => cb.checked = false);
     msUpdateLabel(f.key);
   });
-  COLS.forEach(c => colSearchVals[c.key] = '');
-  document.querySelectorAll('#t-search input, #t-search select').forEach(el => el.value = '');
+  COLS.forEach(c => {
+    if (c.type === 'dropdown') {
+      colSearchVals[c.key].clear();
+      const cid = 'col-' + c.key.replace(/[^a-z0-9]/gi,'_');
+      document.querySelectorAll(`#drop-${cid} input[type=checkbox]`).forEach(cb => cb.checked = false);
+      colMsUpdateLabel(c.key);
+    } else {
+      colSearchVals[c.key] = '';
+    }
+  });
+  document.querySelectorAll('#t-search input[type=text]').forEach(el => el.value = '');
   applyFilters();
 }
 
