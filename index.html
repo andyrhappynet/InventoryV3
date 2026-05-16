@@ -395,6 +395,11 @@ tbody td.cost-cell {
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
+/* named status colours */
+.b-broken   { background: rgba(201,40,40,0.18);  color: #f07070; border: 1px solid rgba(201,40,40,0.45); }
+.b-assigned { background: rgba(56,140,230,0.18); color: #72b8f5; border: 1px solid rgba(56,140,230,0.45); }
+.b-instock  { background: rgba(50,190,120,0.18); color: #5de0a0; border: 1px solid rgba(50,190,120,0.45); }
+/* generic fallbacks */
 .b-green  { background: rgba(46,139,110,0.2); color: #4fc99a; border: 1px solid rgba(46,139,110,0.4); }
 .b-red    { background: rgba(166,50,50,0.2);  color: #e06060; border: 1px solid rgba(166,50,50,0.4); }
 .b-amber  { background: rgba(160,112,32,0.2); color: #d4a040; border: 1px solid rgba(160,112,32,0.4); }
@@ -876,8 +881,8 @@ function renderCharts() {
     data:{ labels, datasets:[{
       label:'Purchase Cost',
       data: labels.map(l => cc[l]||0),
-      backgroundColor: labels.map((_,i) => PALETTE[i%PALETTE.length]+'bb'),
-      borderColor:     labels.map((_,i) => PALETTE[i%PALETTE.length]),
+      backgroundColor: labels.map((l,i) => statusColor(l,i) + 'bb'),
+      borderColor:     labels.map((l,i) => statusColor(l,i)),
       borderWidth:1, borderRadius:3,
     }]},
     options:{ ...base,
@@ -895,7 +900,7 @@ function renderCharts() {
     type:'doughnut',
     data:{ labels, datasets:[{
       data: labels.map(l => sc[l]||0),
-      backgroundColor: labels.map((_,i) => PALETTE[i%PALETTE.length]+'99'),
+      backgroundColor: labels.map((l,i) => statusColor(l,i) + '99'),
       borderColor:'#0f1c2e', borderWidth:2, hoverOffset:8,
     }]},
     options:{ ...base, cutout:'62%',
@@ -971,12 +976,25 @@ function doSort(key) {
 }
 
 function badgeCls(v) {
-  const l = v.toLowerCase();
+  const l = v.toLowerCase().trim();
+  if (l === 'broken/damaged' || l === 'broken' || l === 'damaged') return 'b-broken';
+  if (l === 'assigned')  return 'b-assigned';
+  if (l === 'in stock')  return 'b-instock';
+  // generic fallbacks
   if (l.includes('approv')||l.includes('complet')||l.includes('active')||l.includes('done')) return 'b-green';
   if (l.includes('reject')||l.includes('cancel')||l.includes('inactiv')||l.includes('retir')) return 'b-red';
   if (l.includes('pend')||l.includes('review')||l.includes('hold')) return 'b-amber';
-  if (l.includes('progress')||l.includes('open')||l.includes('assign')) return 'b-blue';
+  if (l.includes('progress')||l.includes('open')) return 'b-blue';
   return 'b-grey';
+}
+
+// Returns a fixed hex colour for known statuses, or picks from PALETTE by index
+function statusColor(label, index) {
+  const l = label.toLowerCase().trim();
+  if (l === 'broken/damaged' || l === 'broken' || l === 'damaged') return '#c92828'; // red
+  if (l === 'assigned')  return '#388ce6'; // light blue
+  if (l === 'in stock')  return '#32be78'; // light green
+  return PALETTE[index % PALETTE.length];
 }
 
 /* ─── utils ─── */
