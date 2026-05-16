@@ -110,19 +110,9 @@ main { max-width: 1440px; margin: 0 auto; padding: 36px 48px; }
   align-items: center;
   gap: 8px;
 }
-.panel-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.filters-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: flex-end;
-}
-.fg { display: flex; flex-direction: column; gap: 6px; }
+.panel-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.filters-row { display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end; }
+.fg { display:flex; flex-direction:column; gap:6px; position:relative; }
 .fg label {
   font-size: 10px;
   letter-spacing: 1.5px;
@@ -130,24 +120,86 @@ main { max-width: 1440px; margin: 0 auto; padding: 36px 48px; }
   color: var(--cream-dim);
   font-weight: 500;
 }
-.fg select {
+
+/* ── custom multi-select dropdown ── */
+.ms-wrap { position:relative; min-width:220px; }
+.ms-trigger {
   background: var(--navy3);
   border: 1px solid var(--border);
   color: var(--cream);
-  padding: 9px 34px 9px 12px;
+  padding: 9px 32px 9px 12px;
   border-radius: 4px;
   font-family: 'Source Sans 3', sans-serif;
   font-size: 13px;
-  min-width: 200px;
+  width: 100%;
   cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23b8974a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   transition: border-color 0.2s;
+  user-select: none;
 }
-.fg select:focus { outline: none; border-color: var(--gold); }
+.ms-trigger:hover, .ms-trigger.open { border-color: var(--gold); }
+.ms-trigger .ms-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ms-trigger .ms-arrow { font-size:10px; color:var(--gold); flex-shrink:0; transition:transform 0.2s; }
+.ms-trigger.open .ms-arrow { transform:rotate(180deg); }
+.ms-count {
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.ms-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  background: var(--navy3);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  z-index: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.ms-dropdown.open { display:block; }
+.ms-search-wrap { padding:8px 10px; border-bottom:1px solid var(--border); }
+.ms-search {
+  width:100%; background:var(--navy2); border:1px solid var(--border);
+  color:var(--cream); padding:5px 9px; border-radius:3px;
+  font-family:'Source Sans 3',sans-serif; font-size:12px;
+}
+.ms-search:focus { outline:none; border-color:var(--gold); }
+.ms-actions {
+  display:flex; gap:8px; padding:6px 10px;
+  border-bottom:1px solid var(--border);
+}
+.ms-act-btn {
+  background:transparent; border:none; color:var(--gold);
+  font-size:11px; cursor:pointer; padding:0; letter-spacing:0.3px;
+  font-family:'Source Sans 3',sans-serif;
+}
+.ms-act-btn:hover { text-decoration:underline; }
+.ms-options { padding:4px 0; }
+.ms-option {
+  display:flex; align-items:center; gap:10px;
+  padding:7px 12px; cursor:pointer;
+  font-size:13px; color:var(--cream);
+  transition:background 0.1s;
+}
+.ms-option:hover { background:rgba(184,151,74,0.1); }
+.ms-option input[type=checkbox] {
+  accent-color: var(--gold);
+  width:14px; height:14px; flex-shrink:0; cursor:pointer;
+}
+.ms-option.hidden { display:none; }
+
 .btn-clear {
   background: transparent;
   border: 1px solid var(--border-lt);
@@ -269,14 +321,8 @@ main { max-width: 1440px; margin: 0 auto; padding: 36px 48px; }
 .rec-count { font-size: 12px; color: var(--cream-dim); }
 
 /* column search row */
-.col-search-row {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--navy3);
-}
-.col-search-row td {
-  padding: 6px 8px;
-}
+.col-search-row { background: var(--navy3); }
+.col-search-row td { padding: 6px 8px; }
 .col-search-row input,
 .col-search-row select {
   width: 100%;
@@ -430,21 +476,15 @@ tbody td.cost-cell {
     <div class="filters-row">
       <div class="fg">
         <label>Status</label>
-        <select id="f-status" onchange="applyFilters()">
-          <option value="">All Statuses</option>
-        </select>
+        <div class="ms-wrap" id="ms-status"></div>
       </div>
       <div class="fg">
         <label>Category</label>
-        <select id="f-category" onchange="applyFilters()">
-          <option value="">All Categories</option>
-        </select>
+        <div class="ms-wrap" id="ms-category"></div>
       </div>
       <div class="fg">
         <label>Company</label>
-        <select id="f-company" onchange="applyFilters()">
-          <option value="">All Companies</option>
-        </select>
+        <div class="ms-wrap" id="ms-company"></div>
       </div>
       <div class="fg">
         <label>&nbsp;</label>
@@ -530,35 +570,32 @@ tbody td.cost-cell {
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQOC100h043T7jDlGk5HopKQWiD7rYW3uz8Fszn5rq-LiRYUV2gA0unvIsdh8ixU4OZaB1SmAT9_BOh/pub?gid=0&single=true&output=csv';
 
-// columns to show and their display labels
 const COLS = [
-  { key: 'Company',       label: 'Company',       type: 'dropdown' },
-  { key: 'Asset Tag',     label: 'Asset Tag',     type: 'text'     },
-  { key: 'Category',      label: 'Category',      type: 'dropdown' },
-  { key: 'Status',        label: 'Status',        type: 'dropdown' },
-  { key: 'Purchase Cost', label: 'Purchase Cost', type: 'text'     },
+  { key:'Company',       label:'Company',       type:'dropdown' },
+  { key:'Asset Tag',     label:'Asset Tag',     type:'text'     },
+  { key:'Category',      label:'Category',      type:'dropdown' },
+  { key:'Status',        label:'Status',        type:'dropdown' },
+  { key:'Purchase Cost', label:'Purchase Cost', type:'text'     },
 ];
 
-// fuzzy key match: find actual column name from CSV headers
-function findCol(headers, target) {
-  const t = target.toLowerCase().replace(/\s+/g,'');
-  return headers.find(h => h.toLowerCase().replace(/\s+/g,'') === t)
-      || headers.find(h => h.toLowerCase().replace(/\s+/g,'').includes(t))
-      || null;
-}
+const GLOBAL_FILTERS = [
+  { key:'Status',   wrapperId:'ms-status',   placeholder:'All Statuses'    },
+  { key:'Category', wrapperId:'ms-category', placeholder:'All Categories'  },
+  { key:'Company',  wrapperId:'ms-company',  placeholder:'All Companies'   },
+];
 
 const PALETTE = ['#b8974a','#3a72c4','#3dab88','#c94040','#c49030','#a78bfa','#38bdf8','#fb923c'];
 
-let allData      = [];
-let filteredData = [];
-let colMap       = {};   // COLS[i].key -> actual CSV header
-let colSearchVals = {};  // key -> current search string
-let sortCol = null, sortDir = 'asc';
-let page = 1;
+let allData = [], filteredData = [], colMap = {};
+let colSearchVals = {};   // column key -> string
+let globalSel = {};       // filter key -> Set of selected values
+let sortCol = null, sortDir = 'asc', page = 1;
 const PG = 15;
 let barChart, donutChart;
 
-/* ── LOAD ── */
+/* ═══════════════════════════════
+   LOAD
+═══════════════════════════════ */
 async function loadData() {
   show('loading-wrap'); hide('error-wrap'); hide('dash');
   try {
@@ -567,65 +604,176 @@ async function loadData() {
     const text = await r.text();
     Papa.parse(text, { header:true, skipEmptyLines:true, complete(res) {
       const headers = res.meta.fields || [];
-      // map our desired cols to actual CSV headers
       colMap = {};
       COLS.forEach(c => { colMap[c.key] = findCol(headers, c.key); });
 
       allData = res.data.map(row => {
-        const costKey = colMap['Purchase Cost'];
-        const raw = costKey ? String(row[costKey]||'').replace(/[^0-9.\-]/g,'') : '0';
+        const ck = colMap['Purchase Cost'];
+        const raw = ck ? String(row[ck]||'').replace(/[^0-9.\-]/g,'') : '0';
         row.__cost = parseFloat(raw) || 0;
         return row;
       });
 
-      colSearchVals = {};
+      // init state
+      GLOBAL_FILTERS.forEach(f => globalSel[f.key] = new Set());
       COLS.forEach(c => colSearchVals[c.key] = '');
 
-      buildGlobalDropdowns();
+      buildGlobalMultiSelects();
       buildColSearchRow();
       applyFilters();
 
       const now = new Date();
-      document.getElementById('last-updated').textContent =
-        'Last updated ' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      set('last-updated', 'Last updated ' + now.toLocaleDateString() + ' ' +
+        now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
 
       hide('loading-wrap'); show('dash');
     }});
-  } catch(e) {
-    hide('loading-wrap'); show('error-wrap');
+  } catch(e) { hide('loading-wrap'); show('error-wrap'); }
+}
+
+function findCol(headers, target) {
+  const t = target.toLowerCase().replace(/\s+/g,'');
+  return headers.find(h => h.toLowerCase().replace(/\s+/g,'') === t)
+      || headers.find(h => h.toLowerCase().replace(/\s+/g,'').includes(t))
+      || null;
+}
+
+/* ═══════════════════════════════
+   CUSTOM MULTI-SELECT
+═══════════════════════════════ */
+function buildGlobalMultiSelects() {
+  GLOBAL_FILTERS.forEach(f => {
+    const col = colMap[f.key];
+    const vals = col ? [...new Set(allData.map(r => r[col]).filter(Boolean))].sort() : [];
+    buildMultiSelect(f.wrapperId, f.placeholder, vals, f.key);
+  });
+
+  // close dropdowns on outside click
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => {
+      if (!d.closest('.ms-wrap').contains(e.target)) {
+        d.classList.remove('open');
+        d.previousElementSibling.classList.remove('open');
+      }
+    });
+  });
+}
+
+function buildMultiSelect(wrapperId, placeholder, vals, filterKey) {
+  const wrap = document.getElementById(wrapperId);
+  if (!wrap) return;
+
+  const optionsHtml = vals.map(v =>
+    `<label class="ms-option">
+      <input type="checkbox" value="${esc(v)}" onchange="msChange('${filterKey}',this)">
+      ${esc(v)}
+    </label>`
+  ).join('');
+
+  wrap.innerHTML = `
+    <button type="button" class="ms-trigger" onclick="msToggle(this)" id="trig-${wrapperId}">
+      <span class="ms-label" id="lbl-${wrapperId}">${placeholder}</span>
+      <span class="ms-arrow">▼</span>
+    </button>
+    <div class="ms-dropdown" id="drop-${wrapperId}">
+      <div class="ms-search-wrap">
+        <input class="ms-search" type="text" placeholder="Search options…"
+          oninput="msSearchOpts(this,'drop-${wrapperId}')">
+      </div>
+      <div class="ms-actions">
+        <button class="ms-act-btn" onclick="msSelectAll('${filterKey}','drop-${wrapperId}','${wrapperId}')">Select all</button>
+        <span style="color:var(--border-lt)">·</span>
+        <button class="ms-act-btn" onclick="msClearOne('${filterKey}','drop-${wrapperId}','${wrapperId}')">Clear</button>
+      </div>
+      <div class="ms-options">${optionsHtml}</div>
+    </div>`;
+}
+
+function msToggle(triggerBtn) {
+  const wrap = triggerBtn.closest('.ms-wrap');
+  const drop  = wrap.querySelector('.ms-dropdown');
+  const isOpen = drop.classList.contains('open');
+  // close all others
+  document.querySelectorAll('.ms-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    d.previousElementSibling.classList.remove('open');
+  });
+  if (!isOpen) { drop.classList.add('open'); triggerBtn.classList.add('open'); }
+}
+
+function msSearchOpts(input, dropId) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll(`#${dropId} .ms-option`).forEach(opt => {
+    opt.classList.toggle('hidden', !opt.textContent.trim().toLowerCase().includes(q));
+  });
+}
+
+function msChange(filterKey, checkbox) {
+  if (checkbox.checked) globalSel[filterKey].add(checkbox.value);
+  else globalSel[filterKey].delete(checkbox.value);
+  msUpdateLabel(filterKey);
+  applyFilters();
+}
+
+function msSelectAll(filterKey, dropId, wrapperId) {
+  const checkboxes = document.querySelectorAll(`#${dropId} .ms-option:not(.hidden) input`);
+  checkboxes.forEach(cb => { cb.checked = true; globalSel[filterKey].add(cb.value); });
+  msUpdateLabel(filterKey);
+  applyFilters();
+}
+
+function msClearOne(filterKey, dropId, wrapperId) {
+  globalSel[filterKey].clear();
+  document.querySelectorAll(`#${dropId} input[type=checkbox]`).forEach(cb => cb.checked = false);
+  msUpdateLabel(filterKey);
+  applyFilters();
+}
+
+function msUpdateLabel(filterKey) {
+  const f = GLOBAL_FILTERS.find(x => x.key === filterKey);
+  if (!f) return;
+  const lbl  = document.getElementById('lbl-' + f.wrapperId);
+  const trig = document.getElementById('trig-' + f.wrapperId);
+  const sel  = globalSel[filterKey];
+  if (!lbl) return;
+  if (sel.size === 0) {
+    lbl.textContent = f.placeholder;
+    // remove count badge if present
+    trig.querySelector('.ms-count')?.remove();
+  } else {
+    lbl.textContent = sel.size === 1 ? [...sel][0] : `${sel.size} selected`;
+    let badge = trig.querySelector('.ms-count');
+    if (!badge) { badge = document.createElement('span'); badge.className='ms-count'; trig.insertBefore(badge, trig.querySelector('.ms-arrow')); }
+    badge.textContent = sel.size;
   }
 }
 
-/* ── GLOBAL DROPDOWN OPTIONS ── */
-function buildGlobalDropdowns() {
-  fillSelect('f-status',   colMap['Status'],   'All Statuses');
-  fillSelect('f-category', colMap['Category'], 'All Categories');
-  fillSelect('f-company',  colMap['Company'],  'All Companies');
-}
-function fillSelect(id, colHeader, placeholder) {
-  const sel = document.getElementById(id);
-  if (!sel || !colHeader) return;
-  const vals = [...new Set(allData.map(r => r[colHeader]).filter(Boolean))].sort();
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-  vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-}
-
-/* ── COLUMN SEARCH ROW ── */
+/* ═══════════════════════════════
+   COLUMN SEARCH ROW
+═══════════════════════════════ */
 function buildColSearchRow() {
-  const tr = document.getElementById('t-search');
-  tr.innerHTML = '<tr>' + COLS.map(c => {
+  const thead = document.getElementById('t-search');
+  // Build one <tr> with one <td> per column
+  const cells = COLS.map(c => {
     const actual = colMap[c.key];
-    const vals = actual ? [...new Set(allData.map(r=>r[actual]).filter(Boolean))].sort() : [];
+    const vals = actual ? [...new Set(allData.map(r => r[actual]).filter(Boolean))].sort() : [];
 
     if (c.type === 'dropdown' && vals.length) {
-      const opts = vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
-      return `<td><select onchange="colSearch('${c.key}',this.value)">
-        <option value="">— All —</option>${opts}</select></td>`;
+      const opts = vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+      return `<td>
+        <select onchange="colSearch('${c.key}', this.value)">
+          <option value="">— All —</option>${opts}
+        </select>
+      </td>`;
     } else {
-      return `<td><input type="text" placeholder="Search…"
-        oninput="colSearch('${c.key}',this.value)"></td>`;
+      return `<td>
+        <input type="text" placeholder="Search…"
+          oninput="colSearch('${c.key}', this.value)">
+      </td>`;
     }
-  }).join('') + '</tr>';
+  });
+
+  thead.innerHTML = `<tr>${cells.join('')}</tr>`;
 }
 
 function colSearch(key, val) {
@@ -634,30 +782,28 @@ function colSearch(key, val) {
   applyFilters();
 }
 
-/* ── APPLY ALL FILTERS ── */
+/* ═══════════════════════════════
+   APPLY FILTERS
+═══════════════════════════════ */
 function applyFilters() {
-  const fStatus   = document.getElementById('f-status')?.value   || '';
-  const fCategory = document.getElementById('f-category')?.value || '';
-  const fCompany  = document.getElementById('f-company')?.value  || '';
-
   filteredData = allData.filter(row => {
-    // global filters
-    if (fStatus   && colMap['Status']   && row[colMap['Status']]   !== fStatus)   return false;
-    if (fCategory && colMap['Category'] && row[colMap['Category']] !== fCategory) return false;
-    if (fCompany  && colMap['Company']  && row[colMap['Company']]  !== fCompany)  return false;
-
+    // global multi-select filters
+    for (const f of GLOBAL_FILTERS) {
+      if (globalSel[f.key].size === 0) continue;
+      const col = colMap[f.key];
+      if (!col) continue;
+      if (!globalSel[f.key].has(row[col])) return false;
+    }
     // column-level search
     for (const c of COLS) {
       const sv = colSearchVals[c.key];
       if (!sv) continue;
-      const actual = colMap[c.key];
-      if (!actual) continue;
-      const cell = String(row[actual]||'').toLowerCase();
-      if (!cell.includes(sv)) return false;
+      const col = colMap[c.key];
+      if (!col) continue;
+      if (!String(row[col]||'').toLowerCase().includes(sv)) return false;
     }
     return true;
   });
-
   page = 1;
   renderKPIs();
   renderCharts();
@@ -665,45 +811,47 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  ['f-status','f-category','f-company'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value='';
+  GLOBAL_FILTERS.forEach(f => {
+    globalSel[f.key].clear();
+    document.querySelectorAll(`#drop-${f.wrapperId} input[type=checkbox]`).forEach(cb => cb.checked = false);
+    msUpdateLabel(f.key);
   });
-  COLS.forEach(c => colSearchVals[c.key]='');
-  // reset col search inputs / selects
-  document.querySelectorAll('#t-search input, #t-search select').forEach(el => el.value='');
+  COLS.forEach(c => colSearchVals[c.key] = '');
+  document.querySelectorAll('#t-search input, #t-search select').forEach(el => el.value = '');
   applyFilters();
 }
 
-/* ── KPIs ── */
+/* ═══════════════════════════════
+   KPIs
+═══════════════════════════════ */
 function fmt(n) {
-  if(isNaN(n)) return '$0.00';
-  if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
-  if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
-  return '$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (isNaN(n)) return '$0.00';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
 function renderKPIs() {
   const total = filteredData.length;
-  const totalAll = allData.length;
-  const cost = filteredData.reduce((s,r)=>s+r.__cost,0);
-
-  // top status
+  const cost  = filteredData.reduce((s,r) => s + r.__cost, 0);
   const sc = {};
   filteredData.forEach(r => {
     const s = (colMap['Status'] ? r[colMap['Status']] : '') || 'Unknown';
-    sc[s]=(sc[s]||0)+1;
+    sc[s] = (sc[s]||0) + 1;
   });
-  const top = Object.entries(sc).sort((a,b)=>b[1]-a[1])[0];
+  const top = Object.entries(sc).sort((a,b) => b[1]-a[1])[0];
 
-  set('kpi-total', total.toLocaleString());
-  set('kpi-total-note', `of ${totalAll.toLocaleString()} total records`);
-  set('kpi-cost', fmt(cost));
-  set('kpi-cost-note', 'accumulated purchase cost');
-  set('kpi-status', top ? top[0] : '—');
-  set('kpi-status-note', top ? top[1]+' records' : '');
+  set('kpi-total',       total.toLocaleString());
+  set('kpi-total-note',  `of ${allData.length.toLocaleString()} total records`);
+  set('kpi-cost',        fmt(cost));
+  set('kpi-cost-note',   'accumulated purchase cost');
+  set('kpi-status',      top ? top[0] : '—');
+  set('kpi-status-note', top ? top[1] + ' records' : '');
 }
 
-/* ── CHARTS ── */
+/* ═══════════════════════════════
+   CHARTS
+═══════════════════════════════ */
 function renderCharts() {
   const sc = {}, cc = {};
   filteredData.forEach(r => {
@@ -713,153 +861,125 @@ function renderCharts() {
   });
   const labels = Object.keys(sc).sort();
 
-  const baseOpts = {
+  const base = {
     responsive:true, maintainAspectRatio:false,
     plugins:{
       legend:{ labels:{ color:'#a9a195', font:{family:'Source Sans 3',size:11}, boxWidth:12, padding:16 } },
-      tooltip:{
-        backgroundColor:'#162437', borderColor:'#2a3f58', borderWidth:1,
-        titleColor:'#b8974a', bodyColor:'#e8e2d5',
-      }
+      tooltip:{ backgroundColor:'#162437', borderColor:'#2a3f58', borderWidth:1, titleColor:'#b8974a', bodyColor:'#e8e2d5' }
     }
   };
 
   const bCtx = document.getElementById('c-bar').getContext('2d');
-  if(barChart) barChart.destroy();
+  if (barChart) barChart.destroy();
   barChart = new Chart(bCtx, {
     type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Purchase Cost',
-        data: labels.map(l=>cc[l]||0),
-        backgroundColor: labels.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
-        borderColor:     labels.map((_,i)=>PALETTE[i%PALETTE.length]),
-        borderWidth:1, borderRadius:3,
-      }]
-    },
-    options:{
-      ...baseOpts,
+    data:{ labels, datasets:[{
+      label:'Purchase Cost',
+      data: labels.map(l => cc[l]||0),
+      backgroundColor: labels.map((_,i) => PALETTE[i%PALETTE.length]+'bb'),
+      borderColor:     labels.map((_,i) => PALETTE[i%PALETTE.length]),
+      borderWidth:1, borderRadius:3,
+    }]},
+    options:{ ...base,
       scales:{
         x:{ ticks:{color:'#8899b0',font:{family:'Source Sans 3',size:11}}, grid:{color:'#1e3045'} },
-        y:{ ticks:{color:'#8899b0',font:{family:'Source Sans 3',size:11}, callback:v=>fmt(v)}, grid:{color:'#1e3045'} }
+        y:{ ticks:{color:'#8899b0',font:{family:'Source Sans 3',size:11},callback:v=>fmt(v)}, grid:{color:'#1e3045'} }
       },
-      plugins:{
-        ...baseOpts.plugins,
-        tooltip:{ ...baseOpts.plugins.tooltip,
-          callbacks:{ label: ctx=>' '+fmt(ctx.parsed.y) }
-        }
-      }
+      plugins:{ ...base.plugins, tooltip:{ ...base.plugins.tooltip, callbacks:{ label: ctx=>' '+fmt(ctx.parsed.y) } } }
     }
   });
 
   const dCtx = document.getElementById('c-donut').getContext('2d');
-  if(donutChart) donutChart.destroy();
+  if (donutChart) donutChart.destroy();
   donutChart = new Chart(dCtx, {
     type:'doughnut',
-    data:{
-      labels,
-      datasets:[{
-        data: labels.map(l=>sc[l]||0),
-        backgroundColor: labels.map((_,i)=>PALETTE[i%PALETTE.length]+'99'),
-        borderColor:'#0f1c2e', borderWidth:2, hoverOffset:8,
-      }]
-    },
-    options:{
-      ...baseOpts, cutout:'62%',
-      plugins:{
-        ...baseOpts.plugins,
-        tooltip:{ ...baseOpts.plugins.tooltip,
-          callbacks:{ label: ctx=>` ${ctx.label}: ${ctx.parsed} records` }
-        }
-      }
+    data:{ labels, datasets:[{
+      data: labels.map(l => sc[l]||0),
+      backgroundColor: labels.map((_,i) => PALETTE[i%PALETTE.length]+'99'),
+      borderColor:'#0f1c2e', borderWidth:2, hoverOffset:8,
+    }]},
+    options:{ ...base, cutout:'62%',
+      plugins:{ ...base.plugins, tooltip:{ ...base.plugins.tooltip, callbacks:{ label: ctx=>` ${ctx.label}: ${ctx.parsed} records` } } }
     }
   });
 }
 
-/* ── TABLE ── */
+/* ═══════════════════════════════
+   TABLE
+═══════════════════════════════ */
 function renderTable() {
-  // sort
   let data = [...filteredData];
-  if(sortCol) {
-    data.sort((a,b)=>{
+  if (sortCol) {
+    data.sort((a,b) => {
       let va = sortCol==='Purchase Cost' ? a.__cost : (colMap[sortCol] ? a[colMap[sortCol]] : '');
       let vb = sortCol==='Purchase Cost' ? b.__cost : (colMap[sortCol] ? b[colMap[sortCol]] : '');
-      if(typeof va==='string') va=va.toLowerCase();
-      if(typeof vb==='string') vb=vb.toLowerCase();
+      if (typeof va==='string') va=va.toLowerCase();
+      if (typeof vb==='string') vb=vb.toLowerCase();
       return va<vb ? (sortDir==='asc'?-1:1) : va>vb ? (sortDir==='asc'?1:-1) : 0;
     });
   }
 
-  // header
   const thead = document.getElementById('t-head');
   thead.innerHTML = '<tr>' + COLS.map(c => {
     const isSorted = sortCol===c.key;
     const arrow = isSorted ? (sortDir==='asc'?'↑':'↓') : '↕';
-    const cls   = isSorted ? 'on' : '';
-    return `<th onclick="doSort('${c.key}')">${c.label} <span class="sort-arrow ${cls}">${arrow}</span></th>`;
+    return `<th onclick="doSort('${c.key}')">${c.label} <span class="sort-arrow ${isSorted?'on':''}">${arrow}</span></th>`;
   }).join('') + '</tr>';
 
-  // count
   set('rec-count', data.length.toLocaleString() + ' records');
 
-  // paginate
   const pages = Math.max(1, Math.ceil(data.length/PG));
-  if(page>pages) page=pages;
+  if (page > pages) page = pages;
   const slice = data.slice((page-1)*PG, page*PG);
 
-  // rows
   const tbody = document.getElementById('t-body');
-  if(!slice.length) {
+  if (!slice.length) {
     tbody.innerHTML = `<tr><td colspan="${COLS.length}" style="text-align:center;color:var(--cream-dim);padding:40px">No records match the current filters.</td></tr>`;
   } else {
-    tbody.innerHTML = slice.map(row => '<tr>' + COLS.map(c => {
-      const actual = colMap[c.key];
-      const raw    = actual ? (row[actual] ?? '') : '';
-      if(c.key==='Status' && raw) {
-        return `<td><span class="badge ${badgeCls(raw)}">${esc(raw)}</span></td>`;
-      }
-      if(c.key==='Purchase Cost') {
-        return `<td class="cost-cell">${fmt(row.__cost)}</td>`;
-      }
-      return `<td>${esc(String(raw))}</td>`;
-    }).join('') + '</tr>').join('');
+    tbody.innerHTML = slice.map(row =>
+      '<tr>' + COLS.map(c => {
+        const actual = colMap[c.key];
+        const raw = actual ? (row[actual] ?? '') : '';
+        if (c.key==='Status' && raw) return `<td><span class="badge ${badgeCls(raw)}">${esc(raw)}</span></td>`;
+        if (c.key==='Purchase Cost')  return `<td class="cost-cell">${fmt(row.__cost)}</td>`;
+        return `<td>${esc(String(raw))}</td>`;
+      }).join('') + '</tr>'
+    ).join('');
   }
 
-  // pagination
   set('pg-info', `Page ${page} of ${pages} · ${data.length.toLocaleString()} records`);
   const pgDiv = document.getElementById('pg-btns');
   pgDiv.innerHTML = '';
   const mkBtn = (lbl, pg, disabled=false, active=false) => {
-    const b=document.createElement('button');
-    b.className='pg-btn'+(active?' active':'');
-    b.textContent=lbl; b.disabled=disabled;
-    b.onclick=()=>{ page=pg; renderTable(); };
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (active?' active':'');
+    b.textContent = lbl; b.disabled = disabled;
+    b.onclick = () => { page=pg; renderTable(); };
     return b;
   };
   pgDiv.appendChild(mkBtn('‹', page-1, page===1));
   let s=Math.max(1,page-2), e=Math.min(pages,s+4);
-  if(e-s<4) s=Math.max(1,e-4);
-  for(let p=s;p<=e;p++) pgDiv.appendChild(mkBtn(p,p,false,p===page));
+  if (e-s<4) s=Math.max(1,e-4);
+  for (let p=s; p<=e; p++) pgDiv.appendChild(mkBtn(p, p, false, p===page));
   pgDiv.appendChild(mkBtn('›', page+1, page===pages));
 }
 
 function doSort(key) {
-  if(sortCol===key) sortDir=sortDir==='asc'?'desc':'asc';
+  if (sortCol===key) sortDir = sortDir==='asc'?'desc':'asc';
   else { sortCol=key; sortDir='asc'; }
   renderTable();
 }
 
 function badgeCls(v) {
   const l = v.toLowerCase();
-  if(l.includes('approv')||l.includes('complet')||l.includes('active')||l.includes('done')) return 'b-green';
-  if(l.includes('reject')||l.includes('cancel')||l.includes('inactiv')||l.includes('retir')) return 'b-red';
-  if(l.includes('pend')||l.includes('review')||l.includes('hold')) return 'b-amber';
-  if(l.includes('progress')||l.includes('open')||l.includes('assign')) return 'b-blue';
+  if (l.includes('approv')||l.includes('complet')||l.includes('active')||l.includes('done')) return 'b-green';
+  if (l.includes('reject')||l.includes('cancel')||l.includes('inactiv')||l.includes('retir')) return 'b-red';
+  if (l.includes('pend')||l.includes('review')||l.includes('hold')) return 'b-amber';
+  if (l.includes('progress')||l.includes('open')||l.includes('assign')) return 'b-blue';
   return 'b-grey';
 }
 
-/* ── UTILS ── */
+/* ─── utils ─── */
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function set(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
 function show(id){ const e=document.getElementById(id); if(e) e.style.display=''; }
@@ -867,5 +987,7 @@ function hide(id){ const e=document.getElementById(id); if(e) e.style.display='n
 
 loadData();
 </script>
+
+
 </body>
 </html>
