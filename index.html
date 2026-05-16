@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Asset Inventory — Executive Report</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
@@ -581,7 +580,10 @@ tbody td.cost-cell {
 </main>
 
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQOC100h043T7jDlGk5HopKQWiD7rYW3uz8Fszn5rq-LiRYUV2gA0unvIsdh8ixU4OZaB1SmAT9_BOh/pub?gid=0&single=true&output=csv';
+// ── CONFIGURACIÓN ──
+// Cuando tengas la URL del Apps Script, reemplaza el placeholder abajo
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzosRnBR3afvOVDIz9BPyhB4NZyzwKBUkShrNnBNeU5E0d_bVXs7cjyqrkJ4ajtfr768w/exec';
+const SECRET_KEY = 'inv-dashboard-2024';
 
 const COLS = [
   { key:'Company',      label:'Company',      type:'dropdown' },
@@ -613,36 +615,41 @@ let barChart, donutChart;
 async function loadData() {
   show('loading-wrap'); hide('error-wrap'); hide('dash');
   try {
-    const r = await fetch(CSV_URL);
-    if (!r.ok) throw new Error();
-    const text = await r.text();
-    Papa.parse(text, { header:true, skipEmptyLines:true, complete(res) {
-      const headers = res.meta.fields || [];
-      colMap = {};
-      COLS.forEach(c => { colMap[c.key] = findCol(headers, c.key); });
+    const url = `${SCRIPT_URL}?key=${SECRET_KEY}`;
+    const r   = await fetch(url);
+    if (!r.ok) throw new Error('Network error');
+    const json = await r.json();
 
-      allData = res.data.map(row => {
-        const ck = colMap['Purchase Cost'];
-        const raw = ck ? String(row[ck]||'').replace(/[^0-9.\-]/g,'') : '0';
-        row.__cost = parseFloat(raw) || 0;
-        return row;
-      });
+    if (json.error) throw new Error(json.error);
 
-      // init state
-      GLOBAL_FILTERS.forEach(f => globalSel[f.key] = new Set());
-      COLS.forEach(c => colSearchVals[c.key] = c.type === 'dropdown' ? new Set() : '');
+    const headers = json.headers || [];
+    colMap = {};
+    COLS.forEach(c => { colMap[c.key] = findCol(headers, c.key); });
 
-      buildGlobalMultiSelects();
-      buildColSearchRow();
-      applyFilters();
+    allData = (json.data || []).map(row => {
+      const ck  = colMap['Purchase Cost'];
+      const raw = ck ? String(row[ck]||'').replace(/[^0-9.\-]/g,'') : '0';
+      row.__cost = parseFloat(raw) || 0;
+      return row;
+    });
 
-      const now = new Date();
-      set('last-updated', 'Last updated ' + now.toLocaleDateString() + ' ' +
-        now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    // init state
+    GLOBAL_FILTERS.forEach(f => globalSel[f.key] = new Set());
+    COLS.forEach(c => colSearchVals[c.key] = c.type === 'dropdown' ? new Set() : '');
 
-      hide('loading-wrap'); show('dash');
-    }});
-  } catch(e) { hide('loading-wrap'); show('error-wrap'); }
+    buildGlobalMultiSelects();
+    buildColSearchRow();
+    applyFilters();
+
+    const now = new Date();
+    set('last-updated', 'Last updated ' + now.toLocaleDateString() + ' ' +
+      now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+
+    hide('loading-wrap'); show('dash');
+  } catch(e) {
+    console.error(e);
+    hide('loading-wrap'); show('error-wrap');
+  }
 }
 
 function findCol(headers, target) {
